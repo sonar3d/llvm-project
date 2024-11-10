@@ -1344,9 +1344,10 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   if (oneof<R_AARCH64_AUTH_TLSDESC_PAGE, RelExpr::R_AARCH64_AUTH_TLSDESC>(
           expr)) {
     assert(ctx.arg.emachine == EM_AARCH64);
-    if (!sym.hasFlag(NEEDS_TLSDESC)) {
+    uint16_t flags = sym.flags.load(std::memory_order_relaxed);
+    if (!(flags & NEEDS_TLSDESC)) {
       sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-    } else if (!sym.hasFlag(NEEDS_TLSDESC_AUTH)) {
+    } else if (!(flags & NEEDS_TLSDESC_AUTH)) {
       errBothAuthAndNonAuth();
       return 1;
     }
