@@ -14,7 +14,6 @@
 
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
-#include "RegAllocEvictionAdvisor.h"
 #include "RegAllocPriorityAdvisor.h"
 #include "SpillPlacement.h"
 #include "SplitKit.h"
