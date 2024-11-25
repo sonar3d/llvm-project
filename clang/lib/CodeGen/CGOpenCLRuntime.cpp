@@ -127,7 +127,10 @@ static const BlockExpr *getBlockExpr(const Expr *E) {
 void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
                                       llvm::Function *InvokeF,
                                       llvm::Value *Block, llvm::Type *BlockTy) {
-  assert(!EnqueuedBlockMap.contains(E) && "Block expression emitted twice");
+
+  // FIXME: Since OpenCL Kernels are emitted twice (kernel version and stub
+  // version), its constituent BlockExpr will also be emitted twice.
+  // assert(!EnqueuedBlockMap.contains(E) && "Block expression emitted twice");
   assert(isa<llvm::Function>(InvokeF) && "Invalid invoke function");
   assert(Block->getType()->isPointerTy() && "Invalid block literal type");
   EnqueuedBlockMap[E].InvokeFunc = InvokeF;
