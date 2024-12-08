@@ -170,12 +170,13 @@ public:
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
-  void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Plugins)
-      P->notifyMaterializing(*MR, G, *this,
-                             ObjBuffer ? ObjBuffer->getMemBufferRef()
-                             : MemoryBufferRef());
-  }
+  // void notifyMaterializing(LinkGraph &G) {
+  //   for (auto &P : Plugins)
+  //     P->notifyMaterializing(*MR, G, *this,
+  //                            ObjBuffer ? ObjBuffer->getMemBufferRef()
+  //                            : MemoryBufferRef());
+  // }
+
 
   void notifyFailed(Error Err) override {
     for (auto &P : Plugins)
@@ -647,7 +648,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
       *this, std::move(R), std::move(O));
 
   if (auto G = createLinkGraphFromObject(ObjBuffer)) {
-    Ctx->notifyMaterializing(**G);
+    // Ctx->notifyMaterializing(**G);
     link(std::move(*G), std::move(Ctx));
   } else {
     Ctx->notifyFailed(G.takeError());
@@ -658,7 +659,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<LinkGraph> G) {
   auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), nullptr);
-  Ctx->notifyMaterializing(*G);
+  // Ctx->notifyMaterializing(*G);
   link(std::move(G), std::move(Ctx));
 }
 
