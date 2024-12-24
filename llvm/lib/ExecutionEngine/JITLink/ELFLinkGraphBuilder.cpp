@@ -25,11 +25,11 @@ namespace llvm {
 namespace jitlink {
 
 StringRef ELFLinkGraphBuilderBase::CommonSectionName(".common");
+StringRef ELFLinkGraphBuilderBase::CommonSectionName(".original_object_content");
 ArrayRef<const char *> ELFLinkGraphBuilderBase::DwarfSectionNames = DWSecNames;
 
 ELFLinkGraphBuilderBase::~ELFLinkGraphBuilderBase() = default;
 
-StringRef ELFLinkGraphBuilderBase::CommonSectionName(".original_object_content");
 
 } // end namespace jitlink
 } // end namespace llvm
