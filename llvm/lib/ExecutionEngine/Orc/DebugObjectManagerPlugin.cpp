@@ -424,19 +424,27 @@ DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 // }
 void DebugObjectManagerPlugin::notifyMaterializing(
   MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
-  PassConfiguration &PassConfig) {
+  PassConfiguration &PassConfig, MemoryBufferRef ObjBuffer) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
   assert(PendingObjs.count(&MR) == 0 &&
          "Cannot have more than one pending debug object per "
          "MaterializationResponsibility");
+  auto It = PendingObjs.find(&MR);
+  if (It == PendingObjs.end())
+    return;
 
+  DebugObject &DebugObj = *It->second;
   // PrePrunePass to inspect linkgraph for ".original_object_content"
-  PassConfig.PrePrunePasses.push_back([](LinkGraph &G) -> Error {
-
+  PassConfig.PrePrunePasses.push_back([&DebugObj](LinkGraph &Graph) -> Error {
+    for (const Section &GraphSection : Graph.sections())
+      if (GraphSection.getName() == ".original_object_content") {
+        // DebugObjectFlags F = 
+        // DebugObj.setFlags()
+      }
     return Error::success();
   });
 
-  if (auto DebugObj = ) {
+  if (auto DebugObj = createDebugObjectFromBuffer(ES, G, Ctx, ObjBuffer)) {
     // Not all link artifacts allow debugging.
     if (*DebugObj == nullptr)
       return;
