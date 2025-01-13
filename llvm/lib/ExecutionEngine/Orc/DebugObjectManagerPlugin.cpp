@@ -422,22 +422,16 @@ DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 //     ES.reportError(DebugObj.takeError());
 //   }
 // }
+
 void DebugObjectManagerPlugin::notifyMaterializing(
   MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
   PassConfiguration &PassConfig, MemoryBufferRef ObjBuffer) {
-  std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  assert(PendingObjs.count(&MR) == 0 &&
-         "Cannot have more than one pending debug object per "
-         "MaterializationResponsibility");
-  auto It = PendingObjs.find(&MR);
-  if (It == PendingObjs.end())
-    return;
 
   DebugObject &DebugObj = *It->second;
   // PrePrunePass to inspect linkgraph for ".original_object_content"
   PassConfig.PrePrunePasses.push_back([&DebugObj](LinkGraph &Graph) -> Error {
     for (const Section &GraphSection : Graph.sections())
-      if (GraphSection.getName() == ".original_object_content") {
+      if (GraphSection.getName() == ".jitlink_original_object_content") {
         // DebugObjectFlags F = 
         // DebugObj.setFlags()
       }
@@ -453,7 +447,7 @@ void DebugObjectManagerPlugin::notifyMaterializing(
                         << G.getName() << "': no debug info\n");
       return;
     }
-    PendingObjs[&MR] = std::move(*DebugObj);
+
   } else {
     ES.reportError(DebugObj.takeError());
   }
