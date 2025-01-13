@@ -136,11 +136,51 @@ static bool isDwarfSection(StringRef SectionName) {
   return DwarfSectionNames.count(SectionName) == 1;
 }
 
+
+// // ELFDebugObject::CreateArchType
+// template <typename ELFT>
+// Expected<std::unique_ptr<ELFDebugObject>>
+// ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
+//                                JITLinkMemoryManager &MemMgr,
+//                                const JITLinkDylib *JD, ExecutionSession &ES) {
+//   using SectionHeader = typename ELFT::Shdr;
+
+
 template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
+
+  Error Err = Error::success();
+
+  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(DebugObj->getBuffer());
+  if (!ObjRef)
+    return ObjRef.takeError();
+
+  Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
+  if (!Sections)
+    return Sections.takeError();
+
+  for (const SectionHeader &Header : *Sections) {
+    Expected<StringRef> Name = ObjRef->getSectionName(Header);
+    if (!Name)
+      return Name.takeError();
+    if (Name->empty())
+      continue;
+    if (isDwarfSection(*Name))
+      DebugObj->setFlags(HasDebugSections);
+
+    // Only record text and data sections (i.e. no bss, comments, rel, etc.)
+    if (Header.sh_type != ELF::SHT_PROGBITS &&
+        Header.sh_type != ELF::SHT_X86_64_UNWIND)
+      continue;
+    if (!(Header.sh_flags & ELF::SHF_ALLOC))
+      continue;
+
     if (auto *GraphSec = G.findSectionByName(*Name))
-    Header->sh_addr =
-     static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
+      Header->sh_addr =
+        static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
+
+  return std::move(DebugObj);
 }
+
 
 DebugObjectManagerPlugin::DebugObjectManagerPlugin(
     ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target,
