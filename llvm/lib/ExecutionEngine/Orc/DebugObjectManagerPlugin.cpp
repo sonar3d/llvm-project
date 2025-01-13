@@ -248,6 +248,12 @@ ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer, Error &Err) {
   return nullptr;
 }
 
+template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
+    if (auto *GraphSec = G.findSectionByName(*Name))
+    Header->sh_addr =
+     static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
+}
+
 template <typename ELFT>
 Expected<std::unique_ptr<ELFDebugObject>>
 ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
@@ -423,35 +429,64 @@ DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 //   }
 // }
 
-void DebugObjectManagerPlugin::notifyMaterializing(
-  MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
-  PassConfiguration &PassConfig, MemoryBufferRef ObjBuffer) {
+// void DebugObjectManagerPlugin::notifyMaterializing(
+//   MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
+//   PassConfiguration &PassConfig, MemoryBufferRef ObjBuffer) {
 
-  DebugObject &DebugObj = *It->second;
-  // PrePrunePass to inspect linkgraph for ".original_object_content"
-  PassConfig.PrePrunePasses.push_back([&DebugObj](LinkGraph &Graph) -> Error {
-    for (const Section &GraphSection : Graph.sections())
-      if (GraphSection.getName() == ".jitlink_original_object_content") {
-        // DebugObjectFlags F = 
-        // DebugObj.setFlags()
-      }
-    return Error::success();
-  });
+//   DebugObject &DebugObj = *It->second;
+//   // PrePrunePass to inspect linkgraph for ".original_object_content"
+//   PassConfig.PrePrunePasses.push_back([&DebugObj](LinkGraph &Graph) -> Error {
+//     for (const Section &GraphSection : Graph.sections())
+//       if (GraphSection.getName() == ".jitlink_original_object_content") {
+//         // DebugObjectFlags F = 
+//         // DebugObj.setFlags()
+//       }
+//     return Error::success();
+//   });
 
-  if (auto DebugObj = createDebugObjectFromBuffer(ES, G, Ctx, ObjBuffer)) {
-    // Not all link artifacts allow debugging.
-    if (*DebugObj == nullptr)
-      return;
-    if (RequireDebugSections && !(**DebugObj).hasFlags(HasDebugSections)) {
-      LLVM_DEBUG(dbgs() << "Skipping debug registration for LinkGraph '"
-                        << G.getName() << "': no debug info\n");
-      return;
-    }
+//   if (auto DebugObj = createDebugObjectFromBuffer(ES, G, Ctx, ObjBuffer)) {
+//     // Not all link artifacts allow debugging.
+//     if (*DebugObj == nullptr)
+//       return;
+//     if (RequireDebugSections && !(**DebugObj).hasFlags(HasDebugSections)) {
+//       LLVM_DEBUG(dbgs() << "Skipping debug registration for LinkGraph '"
+//                         << G.getName() << "': no debug info\n");
+//       return;
+//     }
 
-  } else {
-    ES.reportError(DebugObj.takeError());
+//   } else {
+//     ES.reportError(DebugObj.takeError());
+//   }
+// }
+
+Error DebugObjectManagerPlugin::fixUpDebugObject(LinkGraph &G) {
+  auto *DebugObjSec = G.findSectionByName(".jitlink_original_object_content");
+  assert(DebugObjSec && "No ELF debug object section?");
+  assert(DebugObjSec.blocks_size() == 1 && "ELF debug object contains multiple blocks?");
+  auto DebugObjContent = (*DebugObjSec.blocks_begin())->getAlreadyMutableContent();
+  StringRef DebugObj(DebugObjContent.data(), DebugObjContent.size());
+
+  unsigned char Class, Endian;
+  std::tie(Class, Endian) = getElfArchType(DebugObj);
+  if (Class == ELF::ELFCLASS32) {
+    if (Endian == ELF::ELFDATA2LSB)
+      return fixUp<ELF32LE>(DebugObj, G);
+    else if (Endian == ELF::ELFDATA2MSB)
+      return fixUp<ELF32BE>(DebugObj, G);
+  } else if (Class == ELF::ELFCLASS64) {
+    if (Endian == ELF::ELFDATA2LSB)
+      return fixUp<ELF64LE>(DebugObj, G);
+    else if (Endian == ELF::ELFDATA2MSB)
+      return fixUp<ELF64BE>(DebugObj, G);
   }
-}
+  // Unsupported combo. Remove the debug object section.
+  G.removeSection(*DebugObjSec);
+  LLVM_DEBUG({
+    dbgs() << "Can't emit debug object for " << G.getName()
+           << ": Unsupported ELF class / endianness.\n";
+  });
+  return Error::success();
+}                                                                 
 
 void DebugObjectManagerPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, LinkGraph &G,
