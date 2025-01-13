@@ -143,8 +143,18 @@ static bool isDwarfSection(StringRef SectionName) {
 //                                const JITLinkDylib *JD, ExecutionSession &ES) {
 //   using SectionHeader = typename ELFT::Shdr;
 
-
 template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
+    if (auto *GraphSec = G.findSectionByName(*Name))
+    Header->sh_addr =
+     static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
+}
+
+template <typename ELFT>
+Expected<std::unique_ptr<ELFDebugObject>>
+ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
+                               JITLinkMemoryManager &MemMgr,
+                               const JITLinkDylib *JD, ExecutionSession &ES) {
+  using SectionHeader = typename ELFT::Shdr;
 
   Error Err = Error::success();
 
