@@ -150,16 +150,16 @@ template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
 
   Error Err = Error::success();
 
-  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(DebugObj->getBuffer());
-  if (!ObjRef)
-    return ObjRef.takeError();
+  Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(DebugObj->getBuffer());
+  if (!Buffer)
+    return Buffer.takeError();
 
-  Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
+  Expected<ArrayRef<SectionHeader>> Sections = Buffer->sections();
   if (!Sections)
     return Sections.takeError();
 
   for (const SectionHeader &Header : *Sections) {
-    Expected<StringRef> Name = ObjRef->getSectionName(Header);
+    Expected<StringRef> Name = Buffer->getSectionName(Header);
     if (!Name)
       return Name.takeError();
     if (Name->empty())
