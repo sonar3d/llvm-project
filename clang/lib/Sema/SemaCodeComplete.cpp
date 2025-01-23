@@ -121,8 +121,7 @@ private:
         return;
       }
 
-      if (const NamedDecl *PrevND =
-              DeclOrVector.dyn_cast<const NamedDecl *>()) {
+      if (const NamedDecl *PrevND = dyn_cast<const NamedDecl *>(DeclOrVector)) {
         // 1 -> 2 elements: create the vector of results and push in the
         // existing declaration.
         DeclIndexPairVector *Vec = new DeclIndexPairVector;
@@ -131,8 +130,8 @@ private:
       }
 
       // Add the new element to the end of the vector.
-      DeclOrVector.get<DeclIndexPairVector *>()->push_back(
-          DeclIndexPair(ND, Index));
+      cast<DeclIndexPairVector *>(DeclOrVector)
+          ->push_back(DeclIndexPair(ND, Index));
     }
 
     ~ShadowMapEntry() {
@@ -659,13 +658,13 @@ public:
       : DeclOrIterator(Iterator), SingleDeclIndex(0) {}
 
   iterator &operator++() {
-    if (DeclOrIterator.is<const NamedDecl *>()) {
+    if (isa<const NamedDecl *>(DeclOrIterator)) {
       DeclOrIterator = (NamedDecl *)nullptr;
       SingleDeclIndex = 0;
       return *this;
     }
 
-    const DeclIndexPair *I = DeclOrIterator.get<const DeclIndexPair *>();
+    const DeclIndexPair *I = cast<const DeclIndexPair *>(DeclOrIterator);
     ++I;
     DeclOrIterator = I;
     return *this;
@@ -681,7 +680,7 @@ public:
     if (const NamedDecl *ND = DeclOrIterator.dyn_cast<const NamedDecl *>())
       return reference(ND, SingleDeclIndex);
 
-    return *DeclOrIterator.get<const DeclIndexPair *>();
+    return *cast<const DeclIndexPair *>(DeclOrIterator);
   }
 
   pointer operator->() const { return pointer(**this); }
@@ -702,18 +701,18 @@ ResultBuilder::ShadowMapEntry::begin() const {
   if (DeclOrVector.isNull())
     return iterator();
 
-  if (const NamedDecl *ND = DeclOrVector.dyn_cast<const NamedDecl *>())
+  if (const NamedDecl *ND = dyn_cast<const NamedDecl *>(DeclOrVector))
     return iterator(ND, SingleDeclIndex);
 
-  return iterator(DeclOrVector.get<DeclIndexPairVector *>()->begin());
+  return iterator(cast<DeclIndexPairVector *>(DeclOrVector)->begin());
 }
 
 ResultBuilder::ShadowMapEntry::iterator
 ResultBuilder::ShadowMapEntry::end() const {
-  if (DeclOrVector.is<const NamedDecl *>() || DeclOrVector.isNull())
+  if (isa<const NamedDecl *>(DeclOrVector) || DeclOrVector.isNull())
     return iterator();
 
-  return iterator(DeclOrVector.get<DeclIndexPairVector *>()->end());
+  return iterator(cast<DeclIndexPairVector *>(DeclOrVector)->end());
 }
 
 /// Compute the qualification required to get from the current context

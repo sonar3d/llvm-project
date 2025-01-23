@@ -7,13 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
-#include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-#include <string>
 
 #define DEBUG_TYPE "orc"
 
@@ -168,12 +163,13 @@ public:
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
-  void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Plugins)
-      P->notifyMaterializing(*MR, G, *this,
-                             ObjBuffer ? ObjBuffer->getMemBufferRef()
-                             : MemoryBufferRef());
-  }
+  // void notifyMaterializing(LinkGraph &G) {
+  //   for (auto &P : Plugins)
+  //     P->notifyMaterializing(*MR, G, *this,
+  //                            ObjBuffer ? ObjBuffer->getMemBufferRef()
+  //                            : MemoryBufferRef());
+  // }
+
 
   void notifyFailed(Error Err) override {
     for (auto &P : Plugins)
@@ -605,37 +601,6 @@ ObjectLinkingLayer::Plugin::~Plugin() = default;
 
 char ObjectLinkingLayer::ID;
 
-using BaseT = RTTIExtends<ObjectLinkingLayer, ObjectLayer>;
-
-ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES)
-    : BaseT(ES), MemMgr(ES.getExecutorProcessControl().getMemMgr()) {
-  ES.registerResourceManager(*this);
-}
-
-ObjectLinkingLayer::ObjectLinkingLayer(ExecutionSession &ES,
-                                       JITLinkMemoryManager &MemMgr)
-    : BaseT(ES), MemMgr(MemMgr) {
-  ES.registerResourceManager(*this);
-}
-
-ObjectLinkingLayer::ObjectLinkingLayer(
-    ExecutionSession &ES, std::unique_ptr<JITLinkMemoryManager> MemMgr)
-    : BaseT(ES), MemMgr(*MemMgr), MemMgrOwnership(std::move(MemMgr)) {
-  ES.registerResourceManager(*this);
-}
-
-ObjectLinkingLayer::~ObjectLinkingLayer() {
-  assert(Allocs.empty() && "Layer destroyed with resources still attached");
-  getExecutionSession().deregisterResourceManager(*this);
-}
-
-Error ObjectLinkingLayer::add(ResourceTrackerSP RT,
-                              std::unique_ptr<LinkGraph> G) {
-  auto &JD = RT->getJITDylib();
-  return JD.define(LinkGraphMaterializationUnit::Create(*this, std::move(G)),
-                   std::move(RT));
-}
-
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
@@ -645,7 +610,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
       *this, std::move(R), std::move(O));
 
   if (auto G = createLinkGraphFromObject(ObjBuffer)) {
-    Ctx->notifyMaterializing(**G);
+    // Ctx->notifyMaterializing(**G);
     link(std::move(*G), std::move(Ctx));
   } else {
     Ctx->notifyFailed(G.takeError());
@@ -656,7 +621,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<LinkGraph> G) {
   auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), nullptr);
-  Ctx->notifyMaterializing(*G);
+  // Ctx->notifyMaterializing(*G);
   link(std::move(G), std::move(Ctx));
 }
 
@@ -699,15 +664,16 @@ Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 void ObjectLinkingLayer::handleTransferResources(JITDylib &JD,
                                                  ResourceKey DstKey,
                                                  ResourceKey SrcKey) {
-  if (Allocs.contains(SrcKey)) {
-    // DstKey may not be in the DenseMap yet, so the following line may resize
-    // the container and invalidate iterators and value references.
+  auto I = Allocs.find(SrcKey);
+  if (I != Allocs.end()) {
+    auto &SrcAllocs = I->second;
     auto &DstAllocs = Allocs[DstKey];
-    auto &SrcAllocs = Allocs[SrcKey];
     DstAllocs.reserve(DstAllocs.size() + SrcAllocs.size());
     for (auto &Alloc : SrcAllocs)
       DstAllocs.push_back(std::move(Alloc));
 
+    // Erase SrcKey entry using value rather than iterator I: I may have been
+    // invalidated when we looked up DstKey.
     Allocs.erase(SrcKey);
   }
 
@@ -793,23 +759,7 @@ void EHFrameRegistrationPlugin::notifyTransferringResources(
   auto SI = EHFrameRanges.find(SrcKey);
   if (SI == EHFrameRanges.end())
     return;
-
-  auto DI = EHFrameRanges.find(DstKey);
-  if (DI != EHFrameRanges.end()) {
-    auto &SrcRanges = SI->second;
-    auto &DstRanges = DI->second;
-    DstRanges.reserve(DstRanges.size() + SrcRanges.size());
-    for (auto &SrcRange : SrcRanges)
-      DstRanges.push_back(std::move(SrcRange));
-    EHFrameRanges.erase(SI);
-  } else {
-    // We need to move SrcKey's ranges over without invalidating the SI
-    // iterator.
-    auto Tmp = std::move(SI->second);
-    EHFrameRanges.erase(SI);
-    EHFrameRanges[DstKey] = std::move(Tmp);
   }
 }
 
-} // End namespace orc.
-} // End namespace llvm.
+} // namespace llvm::orc

@@ -17,21 +17,13 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include <mutex>
 #include <optional>
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
@@ -40,12 +32,6 @@
 #endif
 #ifdef HAVE_MALLOC_MALLOC_H
 #include <malloc/malloc.h>
-#endif
-#ifdef HAVE_SYS_IOCTL_H
-#include <sys/ioctl.h>
-#endif
-#ifdef HAVE_TERMIOS_H
-#include <termios.h>
 #endif
 
 //===----------------------------------------------------------------------===//
