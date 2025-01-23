@@ -64,13 +64,6 @@ public:
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
-  void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Plugins)
-      P->notifyMaterializing(*MR, G, *this,
-                             ObjBuffer ? ObjBuffer->getMemBufferRef()
-                                       : MemoryBufferRef());
-  }
-
   void notifyFailed(Error Err) override {
     for (auto &P : Plugins)
       Err = joinErrors(std::move(Err), P->notifyFailed(*MR));
