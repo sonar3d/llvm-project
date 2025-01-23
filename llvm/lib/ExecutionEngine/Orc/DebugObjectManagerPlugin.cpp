@@ -140,12 +140,7 @@ template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
      static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
 }
 
-template <typename ELFT>
-Expected<std::unique_ptr<ELFDebugObject>>
-ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
-                               JITLinkMemoryManager &MemMgr,
-                               const JITLinkDylib *JD, ExecutionSession &ES) {
-  using SectionHeader = typename ELFT::Shdr;
+template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
 
   Error Err = Error::success();
 
