@@ -9,23 +9,17 @@
 // Generic ELF LinkGraph building code.
 //
 //===----------------------------------------------------------------------===//
-
 #include "ELFLinkGraphBuilder.h"
-
 #define DEBUG_TYPE "jitlink"
-
 static const char *DWSecNames[] = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   ELF_NAME,
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
 };
-
 namespace llvm {
 namespace jitlink {
-
 StringRef ELFLinkGraphBuilderBase::CommonSectionName(".common");
-StringRef ELFLinkGraphBuilderBase::OriginalObjectContentSectionName(".jitlink_original_object_content");
 ArrayRef<const char *> ELFLinkGraphBuilderBase::DwarfSectionNames = DWSecNames;
 
 ELFLinkGraphBuilderBase::~ELFLinkGraphBuilderBase() = default;
