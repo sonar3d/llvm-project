@@ -71,9 +71,7 @@ public:
                            bool RequireDebugSections, bool AutoRegisterCode);
   ~DebugObjectManagerPlugin();
 
-  void notifyMaterializing(MaterializationResponsibility &MR,
-                           jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
-                           MemoryBufferRef InputObject) override;
+  Error fixUpDebugObject(LinkGraph &G);
 
   Error notifyEmitted(MaterializationResponsibility &MR) override;
   Error notifyFailed(MaterializationResponsibility &MR) override;

@@ -64,6 +64,18 @@ public:
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
+  void notifyMaterializing(LinkGraph &G) {
+    // If there's an object buffer present then add an original-object-file
+    // section.
+    if (ObjBuffer) {
+      auto &Sec = G.addSection(".jitlink_original_object_content");
+      Sec.setMemLifetime(MemLifetime::NoAlloc); // We don't need to allocate memory for this in the final link.
+      G.addBlock(Sec, ObjBuffer->getBuffer(), orc::ExecutorAddr(), 1, 0); // Add a block reflecting the original object file content.
+    }
+    for (auto &P : Plugins)
+      P->fixUpDebugObject(P)
+  }
+
   void notifyFailed(Error Err) override {
     for (auto &P : Plugins)
       Err = joinErrors(std::move(Err), P->notifyFailed(*MR));
