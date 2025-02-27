@@ -54,14 +54,8 @@
    don't. */
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
-
 /* Define if dlopen() is available on this platform. */
 #cmakedefine HAVE_DLOPEN ${HAVE_DLOPEN}
-
-/* Define if dladdr() is available on this platform. */
-#cmakedefine HAVE_DLADDR ${HAVE_DLADDR}
 
 /* Define to 1 if we can register EH frames on this platform. */
 #cmakedefine HAVE_REGISTER_FRAME ${HAVE_REGISTER_FRAME}
@@ -89,9 +83,6 @@
 
 /* Define to 1 if you have the `getpagesize' function. */
 #cmakedefine HAVE_GETPAGESIZE ${HAVE_GETPAGESIZE}
-
-/* Define to 1 if you have the `getrlimit' function. */
-#cmakedefine HAVE_GETRLIMIT ${HAVE_GETRLIMIT}
 
 /* Define to 1 if you have the `getrusage' function. */
 #cmakedefine HAVE_GETRUSAGE ${HAVE_GETRUSAGE}
@@ -165,9 +156,6 @@
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
 
-/* Define to 1 if you have the `setrlimit' function. */
-#cmakedefine HAVE_SETRLIMIT ${HAVE_SETRLIMIT}
-
 /* Define to 1 if you have the `sigaltstack' function. */
 #cmakedefine HAVE_SIGALTSTACK ${HAVE_SIGALTSTACK}
 
@@ -179,9 +167,6 @@
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
-
-/* Define to 1 if you have the <sys/resource.h> header file. */
-#cmakedefine HAVE_SYS_RESOURCE_H ${HAVE_SYS_RESOURCE_H}
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC}
