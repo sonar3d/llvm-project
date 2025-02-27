@@ -30,8 +30,6 @@
 namespace llvm {
 namespace orc {
 
-class DebugObject;
-
 /// Creates and manages DebugObjects for JITLink artifacts.
 ///
 /// DebugObjects are created when linking for a MaterializationResponsibility
@@ -73,7 +71,6 @@ public:
 
   Error fixUpDebugObject(LinkGraph &G);
 
-  Error notifyEmitted(MaterializationResponsibility &MR) override;
   Error notifyFailed(MaterializationResponsibility &MR) override;
   Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
 

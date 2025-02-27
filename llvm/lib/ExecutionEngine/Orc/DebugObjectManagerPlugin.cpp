@@ -160,46 +160,6 @@ void DebugObjectManagerPlugin::modifyPassConfig(
   }
 }
 
-Error DebugObjectManagerPlugin::notifyEmitted(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  auto It = PendingObjs.find(&MR);
-  if (It == PendingObjs.end())
-    return Error::success();
-
-  // During finalization the debug object is registered with the target.
-  // Materialization must wait for this process to finish. Otherwise we might
-  // start running code before the debugger processed the corresponding debug
-  // info.
-  std::promise<MSVCPError> FinalizePromise;
-  std::future<MSVCPError> FinalizeErr = FinalizePromise.get_future();
-
-  It->second->finalizeAsync(
-      [this, &FinalizePromise, &MR](Expected<ExecutorAddrRange> TargetMem) {
-        // Any failure here will fail materialization.
-        if (!TargetMem) {
-          FinalizePromise.set_value(TargetMem.takeError());
-          return;
-        }
-        if (Error Err =
-                Target->registerDebugObject(*TargetMem, AutoRegisterCode)) {
-          FinalizePromise.set_value(std::move(Err));
-          return;
-        }
-
-        // Once our tracking info is updated, notifyEmitted() can return and
-        // finish materialization.
-        FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
-          assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
-          std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          RegisteredObjs[K].push_back(std::move(PendingObjs[&MR]));
-          PendingObjs.erase(&MR);
-        }));
-      });
-
-  return FinalizeErr.get();
-}
-
 Error DebugObjectManagerPlugin::notifyFailed(
     MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
