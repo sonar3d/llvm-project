@@ -36,13 +36,6 @@ using namespace llvm::object;
 namespace llvm {
 namespace orc {
 
-class DebugObjectSection {
-public:
-  virtual void setTargetMemoryRange(SectionRange Range) = 0;
-  virtual void dump(raw_ostream &OS, StringRef Name) {}
-  virtual ~DebugObjectSection() = default;
-};
-
 enum DebugObjectFlags : int {
   // Request final target memory load-addresses for all sections.
   ReportFinalSectionLoadAddresses = 1 << 0,
@@ -50,78 +43,6 @@ enum DebugObjectFlags : int {
   // We found sections with debug information when processing the input object.
   HasDebugSections = 1 << 1,
 };
-
-/// The plugin creates a debug object from when JITLink starts processing the
-/// corresponding LinkGraph. It provides access to the pass configuration of
-/// the LinkGraph and calls the finalization function, once the resulting link
-/// artifact was emitted.
-///
-class DebugObject {
-public:
-  DebugObject(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
-              ExecutionSession &ES)
-      : MemMgr(MemMgr), JD(JD), ES(ES), Flags(DebugObjectFlags{}) {}
-
-  bool hasFlags(DebugObjectFlags F) const { return Flags & F; }
-  void setFlags(DebugObjectFlags F) {
-    Flags = static_cast<DebugObjectFlags>(Flags | F);
-  }
-  void clearFlags(DebugObjectFlags F) {
-    Flags = static_cast<DebugObjectFlags>(Flags & ~F);
-  }
-
-  using FinalizeContinuation = std::function<void(Expected<ExecutorAddrRange>)>;
-
-  void finalizeAsync(FinalizeContinuation OnFinalize);
-
-  virtual ~DebugObject() {
-    if (Alloc) {
-      std::vector<FinalizedAlloc> Allocs;
-      Allocs.push_back(std::move(Alloc));
-      if (Error Err = MemMgr.deallocate(std::move(Allocs)))
-        ES.reportError(std::move(Err));
-    }
-  }
-
-  virtual void reportSectionTargetMemoryRange(StringRef Name,
-                                              SectionRange TargetMem) {}
-
-protected:
-  using InFlightAlloc = JITLinkMemoryManager::InFlightAlloc;
-  using FinalizedAlloc = JITLinkMemoryManager::FinalizedAlloc;
-
-  virtual Expected<SimpleSegmentAlloc> finalizeWorkingMemory() = 0;
-
-  JITLinkMemoryManager &MemMgr;
-  const JITLinkDylib *JD = nullptr;
-  ExecutionSession &ES;
-
-private:
-  DebugObjectFlags Flags;
-  FinalizedAlloc Alloc;
-};
-
-// Finalize working memory and take ownership of the resulting allocation. Start
-// copying memory over to the target and pass on the result once we're done.
-// Ownership of the allocation remains with us for the rest of our lifetime.
-void DebugObject::finalizeAsync(FinalizeContinuation OnFinalize) {
-  assert(!Alloc && "Cannot finalize more than once");
-
-  if (auto SimpleSegAlloc = finalizeWorkingMemory()) {
-    auto ROSeg = SimpleSegAlloc->getSegInfo(MemProt::Read);
-    ExecutorAddrRange DebugObjRange(ROSeg.Addr, ROSeg.WorkingMem.size());
-    SimpleSegAlloc->finalize(
-        [this, DebugObjRange,
-         OnFinalize = std::move(OnFinalize)](Expected<FinalizedAlloc> FA) {
-          if (FA) {
-            Alloc = std::move(*FA);
-            OnFinalize(DebugObjRange);
-          } else
-            OnFinalize(FA.takeError());
-        });
-  } else
-    OnFinalize(SimpleSegAlloc.takeError());
-}
 
 static const std::set<StringRef> DwarfSectionNames = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
@@ -227,7 +148,7 @@ void DebugObjectManagerPlugin::modifyPassConfig(
   if (It == PendingObjs.end())
     return;
 
-  DebugObject &DebugObj = *It->second;
+  
   if (DebugObj.hasFlags(ReportFinalSectionLoadAddresses)) {
     PassConfig.PostAllocationPasses.push_back(
         [&DebugObj](LinkGraph &Graph) -> Error {
