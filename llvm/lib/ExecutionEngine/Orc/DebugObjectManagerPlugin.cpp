@@ -148,12 +148,19 @@ void DebugObjectManagerPlugin::modifyPassConfig(
   if (It == PendingObjs.end())
     return;
 
+  PassConfig.PrePrunePasses.push_back([](LinkGraph &G) -> Error {
+    // Copy existing object content into the new debug object section
+    auto DebugObjContent = G.getOriginalObjectContentSection();
+    return Error::success();
+    G.f
+  });
   
-  if (DebugObj.hasFlags(ReportFinalSectionLoadAddresses)) {
+  if (DebugObjContent.hasFlags(ReportFinalSectionLoadAddresses)) {
+  // patch up the addresses in the debug object
     PassConfig.PostAllocationPasses.push_back(
-        [&DebugObj](LinkGraph &Graph) -> Error {
+        [&DebugObjContent](LinkGraph &Graph) -> Error {
           for (const Section &GraphSection : Graph.sections())
-            DebugObj.reportSectionTargetMemoryRange(GraphSection.getName(),
+            DebugObjContent.reportSectionTargetMemoryRange(GraphSection.getName(),
                                                     SectionRange(GraphSection));
           return Error::success();
         });
@@ -177,6 +184,8 @@ void DebugObjectManagerPlugin::notifyTransferringResources(JITDylib &JD,
   if (SrcIt != RegisteredObjs.end()) {
     // Resources from distinct MaterializationResponsibilitys can get merged
     // after emission, so we can have multiple debug objects per resource key.
+    
+    // TODO: remove DebugObject
     for (std::unique_ptr<DebugObject> &DebugObj : SrcIt->second)
       RegisteredObjs[DstKey].push_back(std::move(DebugObj));
     RegisteredObjs.erase(SrcIt);
