@@ -56,16 +56,10 @@ static bool isDwarfSection(StringRef SectionName) {
 }
 
 template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
-    if (auto *GraphSec = G.findSectionByName(*Name))
-    Header->sh_addr =
-     static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
-}
-
-template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
 
   Error Err = Error::success();
 
-  Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(DebugObj->getBuffer());
+  Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(G.);
   if (!Buffer)
     return Buffer.takeError();
 
@@ -115,7 +109,8 @@ Error DebugObjectManagerPlugin::fixUpDebugObject(LinkGraph &G) {
   assert(DebugObjSec && "No ELF debug object section?");
   assert(DebugObjSec.blocks_size() == 1 && "ELF debug object contains multiple blocks?");
   auto DebugObjContent = (*DebugObjSec.blocks_begin())->getAlreadyMutableContent();
-  StringRef DebugObj(DebugObjContent.data(), DebugObjContent.size());
+
+  // StringRef DebugObj(DebugObjContent.data(), DebugObjContent.size());
 
   unsigned char Class, Endian;
   std::tie(Class, Endian) = getElfArchType(DebugObj);
@@ -152,7 +147,6 @@ void DebugObjectManagerPlugin::modifyPassConfig(
     // Copy existing object content into the new debug object section
     auto DebugObjContent = G.getOriginalObjectContentSection();
     return Error::success();
-    G.f
   });
   
   if (DebugObjContent.hasFlags(ReportFinalSectionLoadAddresses)) {
