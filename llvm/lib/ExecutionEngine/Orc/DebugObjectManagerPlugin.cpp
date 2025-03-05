@@ -105,7 +105,7 @@ DebugObjectManagerPlugin::DebugObjectManagerPlugin(
 
 DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 
-Error DebugObjectManagerPlugin::fixUpDebugObject(LinkGraph &G) {
+void fixUpDebugObject(LinkGraph &G) {
   auto *DebugObjSec = G.getOriginalObjectContentSection();
   assert(DebugObjSec && "No ELF debug object section?");
   assert(DebugObjSec.blocks_size() == 1 && "ELF debug object contains multiple blocks?");
