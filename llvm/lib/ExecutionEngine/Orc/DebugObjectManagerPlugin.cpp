@@ -114,17 +114,17 @@ void fixUpDebugObject(LinkGraph &G) {
   // StringRef DebugObj(DebugObjContent.data(), DebugObjContent.size());
 
   unsigned char Class, Endian;
-  std::tie(Class, Endian) = getElfArchType(DebugObj);
+  std::tie(Class, Endian) = getElfArchType(DebugObjContent);
   if (Class == ELF::ELFCLASS32) {
     if (Endian == ELF::ELFDATA2LSB)
-      return fixUp<ELF32LE>(DebugObj, G);
+      return fixUp<ELF32LE>(DebugObjContent, G);
     else if (Endian == ELF::ELFDATA2MSB)
-      return fixUp<ELF32BE>(DebugObj, G);
+      return fixUp<ELF32BE>(DebugObjContent, G);
   } else if (Class == ELF::ELFCLASS64) {
     if (Endian == ELF::ELFDATA2LSB)
-      return fixUp<ELF64LE>(DebugObj, G);
+      return fixUp<ELF64LE>(DebugObjContent, G);
     else if (Endian == ELF::ELFDATA2MSB)
-      return fixUp<ELF64BE>(DebugObj, G);
+      return fixUp<ELF64BE>(DebugObjContent, G);
   }
   // Unsupported combo. Remove the debug object section.
   G.removeSection(*DebugObjSec);
