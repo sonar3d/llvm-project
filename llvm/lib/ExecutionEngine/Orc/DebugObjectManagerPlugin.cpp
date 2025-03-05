@@ -59,7 +59,8 @@ template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &G) {
 
   Error Err = Error::success();
 
-  Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(G.);
+  // TODO:replace debugObj
+  // Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(G.g);
   if (!Buffer)
     return Buffer.takeError();
 
@@ -166,24 +167,6 @@ Error DebugObjectManagerPlugin::notifyFailed(
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
   PendingObjs.erase(&MR);
   return Error::success();
-}
-
-void DebugObjectManagerPlugin::notifyTransferringResources(JITDylib &JD,
-                                                           ResourceKey DstKey,
-                                                           ResourceKey SrcKey) {
-  // Debug objects are stored by ResourceKey only after registration.
-  // Thus, pending objects don't need to be updated here.
-  std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-  auto SrcIt = RegisteredObjs.find(SrcKey);
-  if (SrcIt != RegisteredObjs.end()) {
-    // Resources from distinct MaterializationResponsibilitys can get merged
-    // after emission, so we can have multiple debug objects per resource key.
-    
-    // TODO: remove DebugObject
-    for (std::unique_ptr<DebugObject> &DebugObj : SrcIt->second)
-      RegisteredObjs[DstKey].push_back(std::move(DebugObj));
-    RegisteredObjs.erase(SrcIt);
-  }
 }
 
 Error DebugObjectManagerPlugin::notifyRemovingResources(JITDylib &JD,
