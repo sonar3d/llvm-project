@@ -151,8 +151,10 @@ void DebugObjectManagerPlugin::modifyPassConfig(MaterializationResponsibility &M
     // Create new debug section in LinkGraph
     
     // Memory protection for reading graph
-    //MemProt::Read
-    LG.allocateContent(DebugObjContent);
+    orc::MemProt Prot = MemProt::Read;
+    // Create debug section
+    LG.createSection(DebugObjContent, Prot);
+
     return Error::success();
   });
   
