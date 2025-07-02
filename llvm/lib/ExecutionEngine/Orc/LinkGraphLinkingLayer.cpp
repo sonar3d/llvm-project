@@ -64,13 +64,6 @@ public:
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
-  void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Plugins)
-      P->notifyMaterializing(*MR, G, *this,
-                             ObjBuffer ? ObjBuffer->getMemBufferRef()
-                                       : MemoryBufferRef());
-  }
-
   void notifyFailed(Error Err) override {
     for (auto &P : Plugins)
       Err = joinErrors(std::move(Err), P->notifyFailed(*MR));
@@ -512,7 +505,6 @@ void LinkGraphLinkingLayer::emit(
   assert(R && "R must not be null");
   assert(G && "G must not be null");
   auto Ctx = std::make_unique<JITLinkCtx>(*this, std::move(R), nullptr);
-  Ctx->notifyMaterializing(*G);
   link(std::move(G), std::move(Ctx));
 }
 
@@ -524,7 +516,6 @@ void LinkGraphLinkingLayer::emit(
   assert(ObjBuf && "Object must not be null");
   auto Ctx =
       std::make_unique<JITLinkCtx>(*this, std::move(R), std::move(ObjBuf));
-  Ctx->notifyMaterializing(*G);
   link(std::move(G), std::move(Ctx));
 }
 
