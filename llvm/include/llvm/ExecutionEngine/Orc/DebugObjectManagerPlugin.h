@@ -59,7 +59,7 @@ public:
                            bool RequireDebugSections, bool AutoRegisterCode);
   ~DebugObjectManagerPlugin();
 
-  Error fixUpDebugObject(jitlink::LinkGraph &G);
+  Error fixUpDebugObject(jitlink::LinkGraph &LG);
 
   Error notifyFailed(MaterializationResponsibility &MR) override {
     return Error::success();

@@ -60,8 +60,8 @@ template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &LG) {
   Error Err = Error::success();
 
   // TODO:replace debugObj
-  // Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(G.g);
-  if (!Buffer)
+  // Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(LG.g);
+  if (Buffer.Length == 0)
     return Buffer.takeError();
 
   Expected<ArrayRef<SectionHeader>> Sections = Buffer->sections();
