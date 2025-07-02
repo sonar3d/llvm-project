@@ -18,13 +18,13 @@ using namespace llvm::orc;
 
 namespace {
 
-bool hasInitializerSection(jitlink::LinkGraph &G) {
-  bool IsMachO = G.getTargetTriple().isOSBinFormatMachO();
-  bool IsElf = G.getTargetTriple().isOSBinFormatELF();
+bool hasInitializerSection(jitlink::LinkGraph &LG) {
+  bool IsMachO = LG.getTargetTriple().isOSBinFormatMachO();
+  bool IsElf = LG.getTargetTriple().isOSBinFormatELF();
   if (!IsMachO && !IsElf)
     return false;
 
-  for (auto &Sec : G.sections()) {
+  for (auto &Sec : LG.sections()) {
     if (IsMachO && isMachOInitializerSection(Sec.getName()))
       return true;
     if (IsElf && isELFInitializerSection(Sec.getName()))
@@ -83,7 +83,7 @@ public:
   }
 
 private:
-  static Interface scanLinkGraph(ExecutionSession &ES, LinkGraph &G) {
+  static Interface scanLinkGraph(ExecutionSession &ES, LinkGraph &LG) {
 
     Interface LGI;
 
@@ -97,21 +97,21 @@ private:
           getJITSymbolFlagsForSymbol(*Sym);
     };
 
-    for (auto *Sym : G.defined_symbols())
+    for (auto *Sym : LG.defined_symbols())
       AddSymbol(Sym);
-    for (auto *Sym : G.absolute_symbols())
+    for (auto *Sym : LG.absolute_symbols())
       AddSymbol(Sym);
 
-    if (hasInitializerSection(G))
-      LGI.InitSymbol = makeInitSymbol(ES, G);
+    if (hasInitializerSection(LG))
+      LGI.InitSymbol = makeInitSymbol(ES, LG);
 
     return LGI;
   }
 
-  static SymbolStringPtr makeInitSymbol(ExecutionSession &ES, LinkGraph &G) {
+  static SymbolStringPtr makeInitSymbol(ExecutionSession &ES, LinkGraph &LG) {
     std::string InitSymString;
     raw_string_ostream(InitSymString)
-        << "$." << G.getName() << ".__inits" << Counter++;
+        << "$." << LG.getName() << ".__inits" << Counter++;
     return ES.intern(InitSymString);
   }
 
@@ -331,7 +331,7 @@ public:
   }
 
   LinkGraphPassFunction getMarkLivePass(const Triple &TT) const override {
-    return [this](LinkGraph &G) { return markResponsibilitySymbolsLive(G); };
+    return [this](LinkGraph &LG) { return markResponsibilitySymbolsLive(LG); };
   }
 
   Error modifyPassConfig(LinkGraph &LG, PassConfiguration &Config) override {
